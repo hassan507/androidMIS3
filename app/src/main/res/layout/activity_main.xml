@@ -1,28 +1,123 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    xmlns:card_view="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@drawable/background"
     tools:context=".MainActivity">
 
-    <Button
-        android:id="@+id/clearLogButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginRight="8dp"
-        android:text="@string/clear_logs"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+    <ImageView
+        android:layout_marginTop="20dp"
+        android:id="@+id/image"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:src="@drawable/university"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"></ImageView>
 
     <TextView
-        android:id="@+id/logBox"
+        android:id="@+id/name"
+        android:layout_width="wrap_content"
+        android:layout_height="50dp"
+        android:layout_below="@+id/image"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="10dp"
+        android:text="MI SCHOOL COMPANION"
+        android:textColor="@android:color/background_light"
+        android:textSize="18sp"
+        android:textStyle="bold"></TextView>
+
+    <LinearLayout
+        android:id="@+id/ll"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:orientation="horizontal"
+        android:layout_marginBottom="10dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="20dp"
+        android:layout_alignParentBottom="true"
+        android:outlineAmbientShadowColor="#FFC2C6C6"
+        >
+
+        <android.support.v7.widget.CardView
+            android:id="@+id/card"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_gravity="center"
+            app:cardCornerRadius="10dp"
+            card_view:cardElevation="5dp">
+
+            <Button
+                android:id="@+id/clearLogButton"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#203a91"
+                android:text="CLEAR LOG"
+                android:textColor="@android:color/background_light"
+                android:textSize="12sp" />
+
+        </android.support.v7.widget.CardView>
+
+        <android.support.v7.widget.CardView
+            android:id="@+id/card2"
+            android:layout_width="150dp"
+            android:layout_height="50dp"
+            android:layout_gravity="center"
+            android:layout_marginLeft="20dp"
+            android:visibility="gone"
+            app:cardCornerRadius="10dp"
+            card_view:cardElevation="5dp">
+
+            <Button
+                android:id="@+id/updateLogButton"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#203a91"
+                android:text="UPDATE LOG"
+                android:textColor="@android:color/background_light"
+                android:textSize="12sp"
+                android:visibility="gone" />
+
+        </android.support.v7.widget.CardView>
+
+
+    </LinearLayout>
+
+    <android.support.v7.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:scrollbars="vertical"
-        tools:layout_editor_absoluteX="118dp"
-        tools:layout_editor_absoluteY="254dp" />
+        android:layout_above="@+id/ll"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginStart="12dp"
+        android:layout_marginLeft="12dp"
+        android:layout_marginTop="140dp"
+        android:layout_marginEnd="19dp"
+        android:layout_marginRight="19dp"
+        android:layout_marginBottom="45dp"
+        app:cardCornerRadius="5dp">
 
-</android.support.constraint.ConstraintLayout>
+        <android.support.v7.widget.RecyclerView
+            android:id="@+id/recyclerV"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <TextView
+            android:id="@+id/logtext"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+
+            android:layout_margin="10dp"
+            android:background="@color/cardview_light_background"
+            android:textColor="#203a91"
+            android:textSize="18sp"
+            android:visibility="gone"></TextView>
+    </android.support.v7.widget.CardView>
+
+
+</RelativeLayout>

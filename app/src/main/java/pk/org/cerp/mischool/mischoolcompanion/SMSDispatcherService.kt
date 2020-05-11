@@ -20,16 +20,22 @@ import com.beust.klaxon.Klaxon
 import java.io.File
 import java.text.DateFormat
 import java.util.*
+import kotlin.collections.ArrayList
 
 
 class SMSDispatcherService : Service() {
 
+    companion object {
+        val list = arrayListOf<SMSItem>();
+        var isDo = false;
+    }
 
     @TargetApi(Build.VERSION_CODES.O)
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Toast.makeText(this, "Notification Service started by user.", Toast.LENGTH_LONG).show()
         Log.d(TAG, "Services is working")
+
         MyFunc()
         return Service.START_STICKY
     }
@@ -126,12 +132,12 @@ class SMSDispatcherService : Service() {
             val max_sendable = max_per_minute - last_min_messages
 
             Log.d(TAG, "${pending.size} items queued")
-            updateLogText("${pending.size} items queued")
+            updateLogText("Pending: ${pending.size} items queued")
 
 
             // we assume that sending messages will not error for now.
             // because when they do error they tend to show up in the messages app for manual retry
-
+            Log.d("tryMMessage", "max = "+max_per_minute+"  last min msgs = "+last_min_messages+"  current msgs = "+num_messages)
             val next_list = when {
                 last_min_messages > max_per_minute ->  {
                     Log.d(TAG, "too many messages sent last minute. waiting until next round")
@@ -139,16 +145,19 @@ class SMSDispatcherService : Service() {
                 }
                 (last_min_messages + num_messages) < max_per_minute -> {
                     Log.d(TAG, "sending all messages right now")
+                    Log.d("tryMMessage", "sending all messages right now")
                     sendBatchSMS(pending)
                     emptyList<SMSItem>()
                 }
                 (last_15_min_messages + num_messages) in 30..185 -> {
                     // we don't need to worry about the pta rule, so fire off max per minute this round.
+                    Log.d("tryMMessage", "between 30 and 185")
                     Log.d(TAG, "between 30 and 185 messages")
                     sendBatchSMS(pending.take(max_sendable))
                     pending.drop(max_sendable)
                 }
                 (num_messages + last_15_min_messages) > 200 -> {
+                    Log.d("tryMMessage", "Snum + last 15")
                     // fire the messages off at a rate that cares about the pta limit (200 / 15 min) 12 per minute...
                     sendBatchSMS(pending.take(max_per_pta_rule))
                     pending.drop(max_per_pta_rule)
@@ -161,18 +170,19 @@ class SMSDispatcherService : Service() {
             }
 
             writeMessagesToFile(next_list)
-            reschedule = next_list.isNotEmpty()
+//            reschedule = next_list.isNotEmpty()
 
 
         }
         catch(e : Exception) {
+            e.printStackTrace()
             //Log.e(TAG, e.message)
 
         } finally {
-            if(reschedule) SMSJob.scheduleJob() else {
-                Log.d(TAG, "done sending messages!")
-                updateLogText("all messages sent")
-            }
+//            if(reschedule) SMSJob.scheduleJob() else {
+//                Log.d(TAG, "done sending messages!")
+//                //updateLogText("Allall messages sent")
+//            }
         }
     }
 
@@ -186,8 +196,13 @@ class SMSDispatcherService : Service() {
     }
 
     fun sendSMS(p:SMSItem) {
+        Log.d("tryMMessage","in send msg");
+        for (i:SMSItem in list){
+            Log.d("tryMessage",i.text+"  "+i.status);
+        }
         try {
-
+            p.index = list.size;
+            list.add(p);
             // check permission first
             val smsManager = SmsManager.getDefault();
 
@@ -198,46 +213,61 @@ class SMSDispatcherService : Service() {
             Log.d(TAG, "size of messages: ${messages.size}")
 
             val sentPI = PendingIntent.getBroadcast(this, 0, Intent("SENT"), 0)
-
+            val index = p.index;
             val broadCastReceiver = object : BroadcastReceiver() {
                 override fun onReceive(contxt: Context?, intent: Intent?) {
+                    unregisterReceiver(this);
                     Log.d(TAG,"inside receive")
                     val resultCode = getResultCode();
                     if (resultCode == Activity.RESULT_OK) {
+                       // unregisterReceiver(re)
                         p.status = "SENT"
-                        Toast.makeText(getBaseContext(), "SMS sent",Toast.LENGTH_SHORT).show();
+                        Log.d("tryMessage",p.text+"  "+p.index+"  "+index+"  "+p.status+" ")
+                        Toast.makeText(getBaseContext(), "SMS sent ",Toast.LENGTH_SHORT).show();
                     }else if(resultCode == SmsManager.RESULT_ERROR_GENERIC_FAILURE) {
                         p.status = "Failed"
+                        Log.d("tryMessage",p.text+"  "+p.index+"  "+index+"  "+p.status)
                         Toast.makeText(getBaseContext(), "error",Toast.LENGTH_SHORT).show();
                     }else if(resultCode == SmsManager.RESULT_ERROR_NO_SERVICE) {
                         p.status = "Failed"
+                        Log.d("tryMessage",p.text+"  "+p.index+"  "+index+"  "+p.status)
                         Toast.makeText(getBaseContext(), "Generic failure",Toast.LENGTH_SHORT).show();
                     }else if(resultCode == SmsManager.RESULT_ERROR_NULL_PDU) {
                         p.status = "Failed"
+                        Log.d("tryMessage",p.text+"  "+p.index+"  "+index+"  "+p.status)
                         Toast.makeText(getBaseContext(), "No service",Toast.LENGTH_SHORT).show();
                     }else if(resultCode == SmsManager.RESULT_ERROR_RADIO_OFF) {
                         p.status = "Failed"
+                        Log.d("tryMessage",p.text+"  "+p.index+"  "+index+"  "+p.status)
                         Toast.makeText(getBaseContext(), "Radio off",Toast.LENGTH_SHORT).show();
                     }
-
+                 //   abortBroadcast()
                 }
             }
-            registerReceiver( broadCastReceiver ,IntentFilter("SENT"));
+//            if(!isDo) {
+//                isDo = true;
+                registerReceiver(broadCastReceiver, IntentFilter("SENT"));
+ //           }
 
             if(messages.size > 1) {
-                Log.d(TAG, "SENDING MULTIPART")
-                smsManager.sendMultipartTextMessage(p.number, null, messages, null, null)
-                updateLogText("sent multipart message to: ${p.number} at $currentTime")
+                Log.d("tryMMessage", "SENDING MULTIPART")
+                var plist = arrayListOf<PendingIntent>()
+                for (i in 0..messages.size-1){
+                    plist.add(sentPI)
+                }
+                smsManager.sendMultipartTextMessage(p.number, null, messages, plist, null)
+                updateLogText("Message: ${p.number}-${p.text}-${p.status}-$currentTime")
             }
             else {
                 smsManager.sendTextMessage(p.number, null, p.text, sentPI, null)
-                updateLogText("sent message to: ${p.number} at $currentTime")
+                updateLogText("Message: ${p.number}-${p.text}-${p.status}-$currentTime")
             }
-             updateLogText("message sent")
+            //updateLogText("message sent")
+
         } catch( e: Exception) {
             Log.d(TAG, e.message)
             val currentTime = DateFormat.getDateTimeInstance().format(Date())
-            updateLogText("ERROR sending to ${p.number}: ${e.message} at $currentTime")
+            updateLogText("ERROR: ${p.number}-${p.text}-${p.status}-$currentTime")
         }
 
     }
@@ -301,7 +331,7 @@ class SMSDispatcherService : Service() {
         if(file.exists()) {
             val bytes = file.readBytes()
             content = String(bytes)
-            Log.d(TAG,"content of pending messages is $content")
+            Log.d("tryMMessages","content of pending messages is $content")
         }
 
         return if(content == null) emptyList<SMSItem>() else Klaxon().parseArray<SMSItem>(content).orEmpty()
@@ -334,7 +364,7 @@ class SMSDispatcherService : Service() {
         val res = Klaxon().toJsonString(messages)
         file.writeBytes(res.toByteArray())
 
-        Log.d(TAG, "DONE writing file")
+        Log.d(TAG, "DONE  writing file")
     }
 
     fun updateLogText(text : String) {
